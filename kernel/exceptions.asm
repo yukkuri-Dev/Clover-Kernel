@@ -12,21 +12,17 @@ pf_handler:
     call pf_handler_c
     iret
 
+global df_handler
+extern df_handler_c
+df_handler:
+    pop rax
+    call df_handler_c
+    iretq
+
 global keyboard_handler
+extern keyboard_handler_c
 keyboard_handler:
-    ; キースキャンコードを読む
-    in al, 0x60
-
-
-    ; VGAの特定の場所に表示
-    mov byte [0xB8080], al   ; スキャンコードの値
-    mov byte [0xB8081], 0x0A ; 緑
-    
-
-
-
-
-    ; EOIを送る
+    call keyboard_handler_c
     mov al, 0x20
     out 0x20, al
     iretq

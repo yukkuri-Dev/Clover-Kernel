@@ -29,3 +29,13 @@ void its_LOAD(){
     vga_color_print("LOAD", 0x0B);
     vga_print("]");
 }
+void its_FAIL(){
+    vga_print("[");
+    vga_color_print("FAIL", 0x0C);
+    vga_print("]");
+}
+void its_TASK(){
+    vga_print("[");
+    vga_color_print("TASK", 0x0B);
+    vga_print("]");
+}

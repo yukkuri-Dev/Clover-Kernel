@@ -14,12 +14,20 @@ void scheduler_init() {
     kernel_task->state      = 1;
     kernel_task->next       = 0;
     kernel_task->page_table = 0;  // カーネルは現在のCR3をそのまま使う
+    // kernel_taskに名前を設定
+    kernel_task->name[0] = 'k';
+    kernel_task->name[1] = 'e';
+    kernel_task->name[2] = 'r';
+    kernel_task->name[3] = 'n';
+    kernel_task->name[4] = 'e';
+    kernel_task->name[5] = 'l';
+    kernel_task->name[6] = '\0';
     current_task = kernel_task;
     task_list[task_count++] = kernel_task;
 }
 
-void scheduler_add_task(void (*entry)(), uint64_t stack_size __attribute__((unused))) {
-    task_t* task  = (task_t*)kmalloc(sizeof(task_t));
+void scheduler_add_task(const char* name, void (*entry)(), uint64_t stack_size __attribute__((unused))) {
+    task_t* task = (task_t*)kmalloc(sizeof(task_t));
     void*   stack = buddy_alloc(0);  // 4KBスタック
 
     // タスク用アドレス空間を作成（カーネルマッピングを引き継ぐ）
@@ -39,7 +47,18 @@ void scheduler_add_task(void (*entry)(), uint64_t stack_size __attribute__((unus
     task->state = 1;
     task->next  = 0;
 
+    int i = 0;
+    while (name[i] && i < 31) {
+        task->name[i] = name[i];
+        i++;
+    }
+    task->name[i] = '\0';
+    
     task_list[task_count++] = task;
+
+
+
+
 }
 
 void schedule() {
@@ -59,4 +78,13 @@ void schedule() {
     }
 
     context_switch(prev, next);
+}
+
+int scheduler_get_task_count() {
+    return task_count;
+}
+
+task_t* scheduler_get_task(int idx) {
+    if (idx >= task_count) return 0;
+    return task_list[idx];
 }

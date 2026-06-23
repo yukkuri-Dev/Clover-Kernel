@@ -7,3 +7,4 @@
 void buddy_init(uint64_t base, uint64_t length);
 void* buddy_alloc(int order);
 void buddy_free(void* ptr, int order);
+uint64_t buddy_free_pages();

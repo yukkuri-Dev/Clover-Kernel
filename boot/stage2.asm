@@ -12,9 +12,9 @@ start:
     mov ax, 0x2401
     int 0x15
     ;カーソルを非表示にする
-    mov ah, 0x01
-    mov ch, 0x3F
-    int 0x10
+    ;mov ah, 0x01
+    ;mov ch, 0x3F
+    ;int 0x10
     ;load kernel from disk (セクタ34から34セクタ分を0x20000にロード)
     mov ah, 0x42
     mov dl, 0x80

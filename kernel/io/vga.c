@@ -1,5 +1,6 @@
 #include "vga.h"
 
+static void vga_scroll();
 static int cursor_x = 0;
 static int cursor_y = 0;
 static char* vga = (char*)0xB8000;
@@ -25,10 +26,26 @@ void vga_init() {
     vga_clear();
 }
 
+void vga_set_cursor(int x, int y) {
+    uint16_t pos = y * 80 + x;
+    
+    // CRTCコントローラでカーソル位置を設定
+    __asm__ volatile ("outb %0, %1" : : "a"((uint8_t)0x0F), "Nd"((uint16_t)0x3D4));
+    __asm__ volatile ("outb %0, %1" : : "a"((uint8_t)(pos & 0xFF)), "Nd"((uint16_t)0x3D5));
+    __asm__ volatile ("outb %0, %1" : : "a"((uint8_t)0x0E), "Nd"((uint16_t)0x3D4));
+    __asm__ volatile ("outb %0, %1" : : "a"((uint8_t)((pos >> 8) & 0xFF)), "Nd"((uint16_t)0x3D5));
+}
+
 void vga_putchar(char c) {
     if (c == '\n') {
         cursor_x = 0;
         cursor_y++;
+        if (cursor_y >= 25) vga_scroll();
+        vga_set_cursor(cursor_x, cursor_y);
+        return;
+    }
+    if (c == '\b') {
+        vga_backspace();
         return;
     }
     int offset = (cursor_y * 80 + cursor_x) * 2;
@@ -42,12 +59,19 @@ void vga_putchar(char c) {
     if (cursor_y >= 25) {
         vga_scroll();
     }
+    vga_set_cursor(cursor_x, cursor_y);
 }
 
 void vga_putchar_color(char c, char color) {
     if (c == '\n') {
         cursor_x = 0;
         cursor_y++;
+        if (cursor_y >= 25) vga_scroll();
+        vga_set_cursor(cursor_x, cursor_y);
+        return;
+    }
+    if (c == '\b') {
+        vga_backspace();
         return;
     }
     int offset = (cursor_y * 80 + cursor_x) * 2;
@@ -61,6 +85,7 @@ void vga_putchar_color(char c, char color) {
     if (cursor_y >= 25) {
         vga_scroll();
     }
+    vga_set_cursor(cursor_x, cursor_y);
 }
 void vga_color_print(const char* str, char color) {
     while (*str) vga_putchar_color(*str++, color);
@@ -92,7 +117,7 @@ void vga_print_dec(uint64_t val) {
     }
     vga_print(&buf[i]);
 }
-void vga_scroll() {
+static void vga_scroll() {
     // 1行上にコピー
     for (int y = 0; y < 24; y++) {
         for (int x = 0; x < 80; x++) {
@@ -109,4 +134,18 @@ void vga_scroll() {
         vga[offset+1] = 0x0F;
     }
     cursor_y = 24;
+    vga_set_cursor(cursor_x, cursor_y);
+}
+
+void vga_backspace() {
+    if (cursor_x > 0) {
+        cursor_x--;
+    } else if (cursor_y > 0) {
+        cursor_y--;
+        cursor_x = 79;
+    }
+    int offset = (cursor_y * 80 + cursor_x) * 2;
+    vga[offset]   = ' ';
+    vga[offset+1] = 0x0F;
+    vga_set_cursor(cursor_x, cursor_y);
 }

@@ -87,3 +87,15 @@ void buddy_free(void* ptr, int order) {
     *(uint64_t*)addr = free_list[order];
     free_list[order] = addr;
 }
+
+uint64_t buddy_free_pages() {
+    uint64_t count = 0;
+    for (int o = 0; o <= MAX_ORDER; o++) {
+        uint64_t p = free_list[o];
+        while (p) {
+            count += (1 << o);
+            p = *(uint64_t*)p;
+        }
+    }
+    return count;
+}

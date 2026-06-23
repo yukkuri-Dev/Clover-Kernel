@@ -7,7 +7,9 @@
 #include "timer/pit.h"
 #include "task/scheduler.h"
 #include "memmgr/slab.h"
-int kernel_debug = 1;
+
+#include "shell/shell.h"
+int kernel_debug = 0;
 void logo(){
     if (kernel_debug == 1) {
         vga_print("  Clover Kernel alpha 0.1.0-Debug-enable\n");
@@ -18,6 +20,11 @@ void logo(){
         vga_print("  /  /_/   / /_/  / /__/ / / I  I/ / / /  ____/ /  /  /\\__\\/       \n");
         vga_print(" /_____/\\ / ___/\\/______/ /  I___ / / /______/\\/  /__/ /           \n");
         vga_print(" \\_____\\/ \\____\\/\\______\\/    \\___\\/  \\______\\/   \\__\\/            \n");   
+    }
+}
+void blank(){
+    while(1){
+        for(volatile int i = 0; i < 1000000; i++);
     }
 }
 
@@ -42,7 +49,10 @@ void task_b() {
         for(volatile int i = 0; i < 1000000; i++);
     }
 }
-void task_c() {
+void kernel_panic_man_lol() {
+    int a = 1;
+    int b = 0;
+    int c = a / b;  // ここでゼロ除算が発生し、#DE例外がトリガーされる
     //__asm__ volatile ("int3");// デバッグ割り込み(KernelPanic)を発生させる
     while(1) {
         
@@ -120,6 +130,7 @@ vga_print_hex((uint64_t)c);
 vga_print("\n");
 
 }
+
 // freeして再確保したら同じアドレスが返ってくるはず
 kfree(a);
 void* d = kmalloc(16);
@@ -130,13 +141,15 @@ vga_print("\n");
     vga_print("\n");
     vga_print("Testing scheduler...\n");
     scheduler_init();
-    vga_print("Scheduler initialized!\n");
-    scheduler_add_task(task_c, 4096);
-    vga_print("Added Task C\n");
-    scheduler_add_task(task_b, 4096);
-    vga_print("Added Task B\n");
-    scheduler_add_task(task_a, 4096);
-    vga_print("Added Task A\n");
+    //vga_print("Scheduler initialized!\n");
+    //scheduler_add_task(kernel_panic_man_lol, 4096);
+    //vga_print("Added Kernel Panic Task\n");
+    //scheduler_add_task(task_b, 4096);
+    //vga_print("Added Task B\n");
+    //scheduler_add_task(task_a, 4096);
+    //vga_print("Added Task A\n");
+    scheduler_add_task("blank", blank, 4096);
+    scheduler_add_task("shell", shell_run, 4096);
 
     pit_init();
     __asm__ volatile ("sti");

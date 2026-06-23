@@ -11,7 +11,7 @@ typedef struct task {
     uint64_t rbp;
     
     page_table_t page_table; // ページテーブルの物理アドレス
-
+    char name[32];  // タスク名
     void*    stack;     // スタック領域
     int      state;     // RUNNING/READY/BLOCKED
     struct task* next;

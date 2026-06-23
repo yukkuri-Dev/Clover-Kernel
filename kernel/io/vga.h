@@ -14,3 +14,5 @@ void vga_clear();
 void vga_putchar_color(char c, char color) ;
 void vga_color_print(const char* str, char color);
 void vga_color_fill(char color) ;
+void vga_backspace();
+void vga_set_cursor(int x, int y);

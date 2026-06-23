@@ -3,6 +3,7 @@
 
 extern void gp_fault_handler();
 extern void pf_handler();
+extern void df_handler();
 extern void keyboard_handler();
 extern void pit_handler();
 static idt_entry_t idt[256];
@@ -27,13 +28,14 @@ void idt_init() {
     idt_set_entry(14, pf_handler, 0x8E);         // #PF
     idt_set_entry(33, keyboard_handler, 0x8E);  // IRQ1 (キーボード)
     idt_set_entry(32, pit_handler, 0x8E);       //  IRQ0 (PIT)
+    idt_set_entry(8, df_handler, 0x8E);          // #DF
     // IDTRにロード
     __asm__ volatile ("lidt %0" : : "m"(idtr));
 }
 
 
 void gp_fault_handler_c() {
-    kernel_panic("General Protection Fault");
+    kernel_panic("General Protection Fault", 0xCC);
 }
 
 void pf_handler_c() {
@@ -41,5 +43,9 @@ void pf_handler_c() {
     __asm__ volatile ("mov %%cr2, %0" : "=r"(cr2));
     vga_print("\nPage Fault at: ");
     vga_print_hex(cr2);
-    kernel_panic("Page Fault");
+    kernel_panic("Page Fault", 0xCC);
+}
+
+void df_handler_c() {
+    kernel_panic("Double Fault - System Halted", 0xBC);
 }
