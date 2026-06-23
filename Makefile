@@ -25,6 +25,7 @@ CFLAGS        := -ffreestanding \
                  -m64 \
                  -O0 \
                  -Wall \
+				 -mcmodel=large \
                  -Wextra
 
 LDFLAGS       := -nostdlib \

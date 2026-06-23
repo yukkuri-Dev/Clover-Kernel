@@ -3,7 +3,6 @@
 
 start:
 
-
     ; start:の最初に追加
     xor ax, ax
     mov ds, ax
@@ -135,15 +134,20 @@ setup_long_mode:
     ; PTは使わず2MBラージページで1GBをマップ
 
     ; PML4, PDPT, PD領域(各4KB, 合計12KB)をゼロクリア
-    mov edi, 0x10000
+    mov edi, 0x1000
     mov ecx, 3072           ; 4 * 3072 = 12KB
     xor eax, eax
     rep stosd
 
-    ; PML4[0] → PDPT
+    ; PML4[0] → PDPT (Identity Mapping用)
     mov eax, 0x11000
     or eax, 0x03
     mov [0x10000], eax
+
+    ; PML4[256] → PDPT　(for Higher hlaf)
+    mov eax, 0x11000
+    or eax, 0x03
+    mov [0x10000 + 256 * 8], eax
 
     ; PDPT[0] → PD
     mov eax, 0x12000

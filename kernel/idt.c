@@ -37,5 +37,9 @@ void gp_fault_handler_c() {
 }
 
 void pf_handler_c() {
+    uint64_t cr2;
+    __asm__ volatile ("mov %%cr2, %0" : "=r"(cr2));
+    vga_print("\nPage Fault at: ");
+    vga_print_hex(cr2);
     kernel_panic("Page Fault");
 }
