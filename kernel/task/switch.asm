@@ -15,7 +15,7 @@ context_switch:
     ; --- current のスタックに iretq フレームを積む ---
     ; iretq フレーム: [rip, cs, rflags, rsp, ss]  (rip が最上位)
     ; ss
-    push 0x10
+    push 0x10              ; ss = Kernel Data
     ; rsp: この context_switch から schedule に戻った後の rsp
     ;      = context_switch 呼び出し前の rsp (リターンアドレスを除いた値)
     mov rax, rsp
@@ -27,7 +27,7 @@ context_switch:
     or  rax, 0x200
     push rax
     ; cs
-    push 0x18
+    push 0x08              ; cs = Kernel Code (新GDT)
     ; rip: schedule 内のリターンアドレス = スタック上の [rsp + 4*8] の位置
     ;      iretqフレーム4つ(ss/rsp/rflags/cs) を積んだ後、リターンアドレスはその下にある
     mov rax, [rsp + 4*8]

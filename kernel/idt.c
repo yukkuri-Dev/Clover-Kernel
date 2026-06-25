@@ -12,7 +12,7 @@ static idt_ptr_t idtr;
 void idt_set_entry(int vector, void* handler, uint8_t type_attr) {
     uint64_t addr = (uint64_t)handler;
     idt[vector].offset_low  = addr & 0xFFFF;
-    idt[vector].selector    = 0x18;  // 64bitコードセグメント
+    idt[vector].selector    = 0x08;  // Kernel Code (64bit)
     idt[vector].ist         = 0;
     idt[vector].type_attr   = type_attr;
     idt[vector].offset_mid  = (addr >> 16) & 0xFFFF;

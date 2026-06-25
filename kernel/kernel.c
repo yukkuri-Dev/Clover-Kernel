@@ -7,6 +7,8 @@
 #include "timer/pit.h"
 #include "task/scheduler.h"
 #include "memmgr/slab.h"
+#include "gdt/gdt.h"
+
 
 #include "shell/shell.h"
 int kernel_debug = 0;
@@ -50,10 +52,10 @@ void task_b() {
     }
 }
 void kernel_panic_man_lol() {
-    int a = 1;
-    int b = 0;
-    int c = a / b;  // ここでゼロ除算が発生し、#DE例外がトリガーされる
-    //__asm__ volatile ("int3");// デバッグ割り込み(KernelPanic)を発生させる
+    //int a = 1;
+    //int b = 0;
+    //int c = a / b;  // ここでゼロ除算が発生し、#DE例外がトリガーされる
+    __asm__ volatile ("int3");// デバッグ割り込み(KernelPanic)を発生させる
     while(1) {
         
         for(volatile int i = 0; i < 1000000; i++){
@@ -69,6 +71,7 @@ void kernel_main(){
     int kernel_debug = 1;// デバッグ用フラグ
     //みてわかるだろ？？
     // 割り込みのしょきかだよこれ
+    gdt_init();
     idt_init();
     pic_init();
     //ここまでで完了
@@ -79,7 +82,6 @@ void kernel_main(){
     vga_print("\n");
     its_OK();vga_print(" Kernel is loaded!\n");
     pmm_init();
-    
     its_OK();vga_print(" Physical Memory Manager is initialized!\n\n");
     vga_print("Total Memory: ");vga_print_dec(pmm_get_total_memory());vga_print(" bytes may be available\n");
     // ここまででメモリマネージャの初期化が完了
@@ -141,16 +143,20 @@ vga_print("\n");
     vga_print("\n");
     vga_print("Testing scheduler...\n");
     scheduler_init();
+    its_OK();vga_print(" Scheduler initialized!\n");
     //vga_print("Scheduler initialized!\n");
-    //scheduler_add_task(kernel_panic_man_lol, 4096);
+    //scheduler_add_task("crasher",kernel_panic_man_lol, 4096);
     //vga_print("Added Kernel Panic Task\n");
-    //scheduler_add_task(task_b, 4096);
+    //scheduler_add_task("task_b", task_b, 4096);
     //vga_print("Added Task B\n");
-    //scheduler_add_task(task_a, 4096);
+    //scheduler_add_task("task_a",task_a, 4096);
     //vga_print("Added Task A\n");
     scheduler_add_task("blank", blank, 4096);
+    for(int i = 0; i < 2; i++) {
+     //   scheduler_add_task("blank" , blank, 4096);
+    }
     scheduler_add_task("shell", shell_run, 4096);
-
+    //scheduler_add_task_user("blank", blank, 4096);
     pit_init();
     __asm__ volatile ("sti");
 
