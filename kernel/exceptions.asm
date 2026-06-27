@@ -56,13 +56,11 @@ pit_handler:
     test rax, rax
     jz   .no_switch
 
-    ; context_switch(prev, next) を tail-call
-    ; ただしcallするとリターンアドレスが積まれるので
-    ; rbxとリターン先をセットしてjmp
     mov  rdi, rbx        ; prev
     mov  rsi, rax        ; next
     pop  rbx             ; rbxを復元
-    jmp  context_switch  ; context_switch内でiretq
+    call context_switch  ; retで戻ってくる
+    iretq
 
 .no_switch:
     pop rbx

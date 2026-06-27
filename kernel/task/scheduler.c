@@ -6,6 +6,7 @@
 
 extern void context_switch(task_t* current, task_t* next);
 extern void task_wrapper();
+extern void task_launcher();
 
 static task_t* task_head    = 0;  // リスト先頭
 static task_t* task_tail    = 0;  // リスト末尾（追加用）
@@ -44,16 +45,20 @@ void scheduler_init() {
 void scheduler_add_task(const char* name, void (*entry)(), uint64_t stack_size __attribute__((unused))) {
     task_t* task  = (task_t*)kmalloc(sizeof(task_t));
     void*   stack = buddy_alloc(0);
+    if (!task || !stack) return;
 
     task->page_table = 0;
 
     uint64_t* sp = (uint64_t*)((uint64_t)stack + PAGE_SIZE);
     uint64_t stack_top = (uint64_t)sp;
-    *--sp = 0x10;              // ss
-    *--sp = stack_top;         // rsp (iretq後に使うrsp = スタック先頭)
-    *--sp = 0x202;             // rflags (IF=1)
-    *--sp = 0x08;              // cs
-    *--sp = (uint64_t)task_wrapper; // rip
+    // iretqフレーム（task_launcherがiretqする）
+    *--sp = 0x10;                      // ss
+    *--sp = stack_top;                 // rsp
+    *--sp = 0x202;                     // rflags (IF=1)
+    *--sp = 0x08;                      // cs
+    *--sp = (uint64_t)task_wrapper;    // rip
+    // context_switchのretで飛ぶアドレス
+    *--sp = (uint64_t)task_launcher;
 
     task->rdi        = (uint64_t)entry;
     task->rsp        = (uint64_t)sp;
@@ -75,11 +80,12 @@ void scheduler_add_task_user(const char* name, void (*entry)(), uint64_t stack_s
 
     uint64_t* sp = (uint64_t*)((uint64_t)ustack + PAGE_SIZE);
     uint64_t ustack_top = (uint64_t)sp;
-    *--sp = 0x23;              // ss
-    *--sp = ustack_top;        // rsp (iretq後に使うrsp = スタック先頭)
-    *--sp = 0x202;             // rflags (IF=1)
-    *--sp = 0x1B;              // cs
-    *--sp = (uint64_t)task_wrapper; // rip
+    *--sp = 0x23;                      // ss
+    *--sp = ustack_top;                // rsp
+    *--sp = 0x202;                     // rflags (IF=1)
+    *--sp = 0x1B;                      // cs
+    *--sp = (uint64_t)task_wrapper;    // rip
+    *--sp = (uint64_t)task_launcher;   // context_switchのretで飛ぶアドレス
 
     task->rdi   = (uint64_t)entry;
     task->rsp   = (uint64_t)sp;

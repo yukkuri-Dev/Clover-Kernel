@@ -154,16 +154,11 @@ vga_print("\n");
     //scheduler_add_task("task_a",task_a, 4096);
     //vga_print("Added Task A\n");
     //scheduler_add_task("blank", blank, 4096);
-    for(int i = 0; i < 20; i++) {
-        vga_print("free pages before: ");
-        vga_print_dec(buddy_free_pages());
-        vga_print("\n");
+    for(int i = 0; i < 200; i++) {
         scheduler_add_task("hello" , hello, 4096);
-        vga_print("Added ");
-        vga_print_hex(i);
-        vga_print(" free pages after: ");
-        vga_print_dec(buddy_free_pages());
-        vga_print("\n");
+        //vga_print("Added ");
+        //vga_print_hex(i);
+        //vga_print("\n");
     }
     scheduler_add_task("shell", shell_run, 4096);
     ///scheduler_add_task_user("blank", blank, 4096);

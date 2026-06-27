@@ -16,11 +16,17 @@ start:
     ;mov ch, 0x3F
     ;int 0x10
     ;load kernel from disk (セクタ34から34セクタ分を0x20000にロード)
+    mov cx, 3          ; リトライ回数
+.disk_retry:
     mov ah, 0x42
     mov dl, 0x80
     mov si, dap
     int 0x13
-    jc disk_error
+    jnc .disk_ok
+    dec cx
+    jnz .disk_retry
+    jmp disk_error
+.disk_ok:
 
     ;get memory map
     ; メモリマップを0x500に書き込む

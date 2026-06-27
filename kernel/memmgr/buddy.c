@@ -11,32 +11,25 @@ static uint64_t buddy_pages;
 static uint8_t page_flags[MAX_PAGES];
 
 void buddy_init(uint64_t base, uint64_t length) {
-
     buddy_base  = base;
     buddy_pages = length / PAGE_SIZE;
-    //debug
-    vga_print("buddy_pages: ");
-    vga_print_dec(buddy_pages);
-    vga_print("\n");
-    vga_print("MAX_ORDER: ");
-    vga_print_dec(1 << MAX_ORDER);
-    vga_print("\n");
 
-    // フリーリスト初期化
     for (int i = 0; i <= MAX_ORDER; i++)
         free_list[i] = 0;
 
-    // 全ページを最大orderのブロックとして登録
     uint64_t i = 0;
-    int order = MAX_ORDER;
-    while (i + (1 << order) <= buddy_pages) {
-        buddy_free((void*)(base + i * PAGE_SIZE), order);
-        i += (1 << order);
+    while (i + (1 << MAX_ORDER) <= buddy_pages) {
+        buddy_free((void*)(base + i * PAGE_SIZE), MAX_ORDER);
+        i += (1 << MAX_ORDER);
     }
-    //debug
-    vga_print("free_list[9]: ");
-    vga_print_hex(free_list[MAX_ORDER]);
-    vga_print("\n");
+    int order = MAX_ORDER - 1;
+    while (order >= 0) {
+        if (i + (1 << order) <= buddy_pages) {
+            buddy_free((void*)(base + i * PAGE_SIZE), order);
+            i += (1 << order);
+        }
+        order--;
+    }
 }
 
 void* buddy_alloc(int order) {
