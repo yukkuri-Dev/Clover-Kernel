@@ -34,18 +34,32 @@ void idt_init() {
 }
 
 
-void gp_fault_handler_c() {
-    kernel_panic("General Protection Fault", 0xCC);
+void gp_fault_handler_c(uint64_t rip, uint64_t cs) {
+    vga_color_fill(0x40);
+    if (cs & 3)
+        vga_print("#GP from Ring3 at RIP: ");
+    else
+        vga_print("#GP from Ring0 at RIP: ");
+    vga_print_hex(rip);
+    vga_print("\n");
+    kernel_panic("General Protection Fault");
 }
 
-void pf_handler_c() {
-    uint64_t cr2;
-    __asm__ volatile ("mov %%cr2, %0" : "=r"(cr2));
-    vga_print("\nPage Fault at: ");
+void pf_handler_c(uint64_t cr2,uint64_t cs) {
+    vga_color_fill(0x40);  // 赤背景に変更
+    vga_print("Page Fault at: ");
     vga_print_hex(cr2);
-    kernel_panic("Page Fault", 0xCC);
+    if (cs & 3)
+        vga_print(" from Ring3\n");
+    else
+        vga_print(" from Ring0\n");
+    kernel_panic("Page Fault");
 }
 
-void df_handler_c() {
-    kernel_panic("Double Fault - System Halted", 0xBC);
+void df_handler_c( uint64_t rip) {
+    vga_color_fill(0x40);  // 赤背景に変更
+    vga_print("Double Fault at RIP: ");
+    vga_print_hex(rip);
+    vga_print("\n");
+    kernel_panic("Double Fault - System Halted");
 }

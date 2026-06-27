@@ -12,6 +12,7 @@ typedef struct task {
     
     page_table_t page_table; // ページテーブルの物理アドレス
     uint64_t kstack_top;     // Ring0スタック先頭（Ring3タスクのTSS RSP0用、Ring0タスクは0）
+    uint8_t ring;            // 0 = Ring0, 3 = Ring3
     char name[32];
     void*    stack;
     int      state;

@@ -26,10 +26,12 @@ void logo(){
 }
 void blank(){
     while(1){
-        for(volatile int i = 0; i < 1000000; i++);
+        __asm__ volatile ("hlt");
     }
 }
-
+void hello() {
+    vga_print("Hello, World!\n");
+}
 void task_a() {
     vga_print("Task A is running...\n");
     char val = 'A';
@@ -151,12 +153,20 @@ vga_print("\n");
     //vga_print("Added Task B\n");
     //scheduler_add_task("task_a",task_a, 4096);
     //vga_print("Added Task A\n");
-    scheduler_add_task("blank", blank, 4096);
-    for(int i = 0; i < 2; i++) {
-     //   scheduler_add_task("blank" , blank, 4096);
+    //scheduler_add_task("blank", blank, 4096);
+    for(int i = 0; i < 20; i++) {
+        vga_print("free pages before: ");
+        vga_print_dec(buddy_free_pages());
+        vga_print("\n");
+        scheduler_add_task("hello" , hello, 4096);
+        vga_print("Added ");
+        vga_print_hex(i);
+        vga_print(" free pages after: ");
+        vga_print_dec(buddy_free_pages());
+        vga_print("\n");
     }
     scheduler_add_task("shell", shell_run, 4096);
-    //scheduler_add_task_user("blank", blank, 4096);
+    ///scheduler_add_task_user("blank", blank, 4096);
     pit_init();
     __asm__ volatile ("sti");
 

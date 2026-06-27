@@ -8,7 +8,7 @@ void Hello(){
     vga_print("Blank task is running...\n");
 }
 extern int nope = 0;
-
+extern int shell_numble = 0;
 void license() {
     vga_print("Clover Kernel's shell v0.1.0\n");
     vga_print("Kernel Built-in\n");
@@ -72,7 +72,7 @@ void shell_run() {
         }else if (strcmp(input, "tasks") == 0) {
             vga_print("Task list:\n");
             int count = scheduler_get_task_count();
-            vga_print("PID  TASK_ADDR        NAME_ADDR        NAME\n");
+            vga_print("PID  TASK_ADDR           NAME_ADDR           RING    NAME\n");
             for (int i = 0; i < count; i++) {
                 task_t* t = scheduler_get_task(i);
                 vga_print_dec(i);
@@ -80,9 +80,13 @@ void shell_run() {
                 vga_print_hex((uint64_t)t);
                 vga_print("  ");
                 vga_print_hex((uint64_t)t->name);
-                vga_print("  [");
+                vga_print("  ");
+                vga_print_dec(t->ring);
+                vga_print("       ");
+                vga_print("[");
                 vga_print(t->name);
-                vga_print("]\n");
+                vga_print("] ");
+                vga_print("\n");
             }
         } else if (strcmp(input, "crash") == 0) {
             if (nope < 1) {
@@ -107,7 +111,18 @@ void shell_run() {
         }else if (strcmp(input,"yes") == 0){
             vga_print("yes\n");
 
-        } else {
+        } else if(strncmp(input,"run ", 4) == 0){
+            vga_print(input + 4);
+            
+            
+            scheduler_add_task("Hello", Hello, 4096);
+            shell_numble++;
+            vga_putchar('\n');
+
+
+
+
+        }else {
             vga_print("Unknown command: ");
             vga_print(input);
             vga_putchar('\n');

@@ -141,21 +141,21 @@ setup_long_mode:
 
     ; PML4[0] → PDPT (Identity Mapping用)
     mov eax, 0x11000
-    or eax, 0x03
+    or eax, 0x03            ; Present + R/W
     mov [0x10000], eax
 
-    ; PML4[256] → PDPT　(for Higher hlaf)
+    ; PML4[256] → PDPT　(for Higher half)
     mov eax, 0x11000
-    or eax, 0x03
+    or eax, 0x03            ; Present + R/W
     mov [0x10000 + 256 * 8], eax
 
     ; PDPT[0] → PD
     mov eax, 0x12000
-    or eax, 0x03
+    or eax, 0x03            ; Present + R/W
     mov [0x11000], eax
 
     ; PD: 512エントリ × 2MB = 1GB をラージページでマップ
-    ; PD[i] = i * 0x200000 | 0x83 (Present + R/W + PageSize)
+    ; PD[i] = i * 0x200000 | 0x83 (Present + R/W + PageSize(2MB))
     mov ecx, 0
     .pd_loop:
         mov eax, ecx
