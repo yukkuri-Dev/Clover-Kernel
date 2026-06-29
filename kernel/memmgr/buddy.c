@@ -33,13 +33,10 @@ void buddy_init(uint64_t base, uint64_t length) {
 }
 
 void* buddy_alloc(int order) {
-    // 要求orderが不正な場合は失敗
     if (order < 0 || order > MAX_ORDER) return 0;
-    // 要求orderから上を探す
     for (int o = order; o <= MAX_ORDER; o++) {
         if (free_list[o] == 0) continue;
 
-        // ブロックを取り出す
         uint64_t addr = free_list[o];
         free_list[o] = *(uint64_t*)addr;
 
@@ -54,6 +51,9 @@ void* buddy_alloc(int order) {
     }
     return 0;  // メモリ不足
 }
+
+extern void vga_print(const char*);
+extern void vga_print_hex(uint64_t);
 
 void buddy_free(void* ptr, int order) {
     uint64_t addr = (uint64_t)ptr;

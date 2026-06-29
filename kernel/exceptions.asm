@@ -3,9 +3,10 @@ global gp_fault_handler
 global pf_handler
 
 gp_fault_handler:
-    mov rdi, [rsp + 8]   ; rip
-    mov rsi, [rsp + 16]  ; cs
-    pop rax              ; エラーコードを捨てる
+    pop rax              ; エラーコードを捨てる（先に捨てる）
+    mov rdi, [rsp + 0]   ; rip
+    mov rsi, [rsp + 8]   ; cs
+    mov rdx, rax         ; エラーコードも渡す
     call gp_fault_handler_c
     iretq
 
@@ -38,32 +39,26 @@ extern schedule_next
 extern context_switch
 
 pit_handler:
-    ; EOI を最初に送る
     push rax
     mov al, 0x20
     out 0x20, al
     pop rax
 
-    ; schedule_next(&prev) を呼ぶ
-    ; caller-savedをここでは保存しない → context_switch側で管理
-    push rbx
+    ; out_prev 用スロットをスタックに確保
     sub  rsp, 8
-    mov  rdi, rsp        ; &out_prev
-    call schedule_next   ; rax = next (0なら切り替えなし)
-    mov  rbx, [rsp]      ; rbx = prev
+    mov  rdi, rsp
+    call schedule_next   ; rax = next, [rsp] = prev
+    mov  rdi, [rsp]      ; rdi = prev
     add  rsp, 8
 
     test rax, rax
     jz   .no_switch
 
-    mov  rdi, rbx        ; prev
-    mov  rsi, rax        ; next
-    pop  rbx             ; rbxを復元
-    call context_switch  ; retで戻ってくる
+    mov  rsi, rax        ; rsi = next
+    call context_switch
     iretq
 
 .no_switch:
-    pop rbx
     iretq
 
 extern gp_fault_handler_c

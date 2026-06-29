@@ -34,13 +34,17 @@ void idt_init() {
 }
 
 
-void gp_fault_handler_c(uint64_t rip, uint64_t cs) {
+void gp_fault_handler_c(uint64_t rip, uint64_t cs, uint64_t err) {
     vga_color_fill(0x40);
     if (cs & 3)
-        vga_print("#GP from Ring3 at RIP: ");
+        vga_print("#GP from Ring3 RIP: ");
     else
-        vga_print("#GP from Ring0 at RIP: ");
+        vga_print("#GP from Ring0 RIP: ");
     vga_print_hex(rip);
+    vga_print(" CS: ");
+    vga_print_hex(cs);
+    vga_print(" ERR: ");
+    vga_print_hex(err);
     vga_print("\n");
     kernel_panic("General Protection Fault");
 }

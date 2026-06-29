@@ -7,6 +7,11 @@
 #    sector 3以降           : kernel.bin (Kernel)
 # ============================================================
 
+# --- Architecture ---
+# x86_64, aarch64, riscv64
+# ============================
+ARCH ?= x86_64
+
 # --- Tools ---
 ASM       := nasm
 CC        := gcc
@@ -15,7 +20,13 @@ OBJCOPY   := objcopy
 
 # --- Flags ---
 ASMFLAGS_BIN  := -f bin
+ifeq ($(ARCH), x86_64)
 ASMFLAGS_ELF  := -f elf64
+else ifeq ($(ARCH), aarch64)
+ASMFLAGS_ELF  := -f elf64
+else ifeq ($(ARCH), riscv64)
+ASMFLAGS_ELF  := -f elf64
+endif
 CFLAGS        := -ffreestanding \
                  -fno-stack-protector \
                  -fno-pic \
@@ -35,19 +46,24 @@ LDFLAGS       := -nostdlib \
 # --- Directories ---
 BOOT_DIR   := boot
 KERNEL_DIR := kernel
+ARCH_DIR   := arch/$(ARCH)
 BUILD_DIR  := build
 
 # --- Sources ---
 BOOT_SRC    := $(BOOT_DIR)/boot.asm
 STAGE2_SRC  := $(BOOT_DIR)/stage2.asm
 
-KERNEL_C_SRCS := $(shell find $(KERNEL_DIR) -name "*.c")
+KERNEL_C_SRCS   := $(shell find $(KERNEL_DIR) -name "*.c")
 KERNEL_ASM_SRCS := $(shell find $(KERNEL_DIR) -name "*.asm")
+ARCH_C_SRCS     := $(shell find $(ARCH_DIR) -name "*.c"   2>/dev/null)
+ARCH_ASM_SRCS   := $(shell find $(ARCH_DIR) -name "*.asm" 2>/dev/null)
 
 # --- Objects ---
-KERNEL_ASM_OBJS := $(patsubst $(KERNEL_DIR)/%.asm, $(BUILD_DIR)/%.asm.o, $(KERNEL_ASM_SRCS))
-KERNEL_C_OBJS   := $(patsubst $(KERNEL_DIR)/%.c,   $(BUILD_DIR)/%.c.o,   $(KERNEL_C_SRCS))
-KERNEL_OBJS     := $(KERNEL_ASM_OBJS) $(KERNEL_C_OBJS)
+KERNEL_ASM_OBJS := $(patsubst $(KERNEL_DIR)/%.asm, $(BUILD_DIR)/kernel/%.asm.o, $(KERNEL_ASM_SRCS))
+KERNEL_C_OBJS   := $(patsubst $(KERNEL_DIR)/%.c,   $(BUILD_DIR)/kernel/%.c.o,   $(KERNEL_C_SRCS))
+ARCH_ASM_OBJS   := $(patsubst $(ARCH_DIR)/%.asm,   $(BUILD_DIR)/arch/%.asm.o,   $(ARCH_ASM_SRCS))
+ARCH_C_OBJS     := $(patsubst $(ARCH_DIR)/%.c,     $(BUILD_DIR)/arch/%.c.o,     $(ARCH_C_SRCS))
+KERNEL_OBJS     := $(KERNEL_ASM_OBJS) $(KERNEL_C_OBJS) $(ARCH_ASM_OBJS) $(ARCH_C_OBJS)
 
 # --- Output ---
 BOOT_BIN    := $(BUILD_DIR)/boot.bin
@@ -101,13 +117,25 @@ $(BUILD_DIR)/kernel.elf: $(KERNEL_OBJS) linker.ld | $(BUILD_DIR)
 	@echo "[LD]  $@"
 
 # --- Kernel ASM objects ---
-$(BUILD_DIR)/%.asm.o: $(KERNEL_DIR)/%.asm
+$(BUILD_DIR)/kernel/%.asm.o: $(KERNEL_DIR)/%.asm
 	mkdir -p $(dir $@)
 	$(ASM) $(ASMFLAGS_ELF) $< -o $@
 	@echo "[ASM] $< -> $@"
 
 # --- Kernel C objects ---
-$(BUILD_DIR)/%.c.o: $(KERNEL_DIR)/%.c
+$(BUILD_DIR)/kernel/%.c.o: $(KERNEL_DIR)/%.c
+	mkdir -p $(dir $@)
+	$(CC) $(CFLAGS) -c $< -o $@
+	@echo "[CC]  $< -> $@"
+
+# --- Arch ASM objects ---
+$(BUILD_DIR)/arch/%.asm.o: $(ARCH_DIR)/%.asm
+	mkdir -p $(dir $@)
+	$(ASM) $(ASMFLAGS_ELF) $< -o $@
+	@echo "[ASM] $< -> $@"
+
+# --- Arch C objects ---
+$(BUILD_DIR)/arch/%.c.o: $(ARCH_DIR)/%.c
 	mkdir -p $(dir $@)
 	$(CC) $(CFLAGS) -c $< -o $@
 	@echo "[CC]  $< -> $@"

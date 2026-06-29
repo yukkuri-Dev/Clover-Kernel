@@ -3,6 +3,7 @@
 #include "io/vga.h"
 #include "memmgr/pmm.h"
 #include "memmgr/buddy.h"
+#include "memmgr/vmm.h"
 #include "popup.h"
 #include "timer/pit.h"
 #include "task/scheduler.h"
@@ -11,12 +12,14 @@
 
 
 #include "shell/shell.h"
+#include "syscall/syscall.h"
+#include "task/user_task.h"
 int kernel_debug = 0;
 void logo(){
     if (kernel_debug == 1) {
-        vga_print("  Clover Kernel alpha 0.1.0-Debug-enable\n");
+        vga_print("  Clover Kernel alpha 0.2.0-Debug-enable\n");
     }else{
-        vga_print("     ______   __  Kernel alpha 0.1.0\n");
+        vga_print("     ______   __  Kernel alpha 0.2.0\n");
         vga_print("    /  ___/\\ / /\\   ______    __   __    _______     ______ \n");
         vga_print("   /  /\\__\\// / /  / ___  /\\ I  I / /\\  /  __  /\\   /  ___/\\ \n");
         vga_print("  /  /_/   / /_/  / /__/ / / I  I/ / / /  ____/ /  /  /\\__\\/       \n");
@@ -31,6 +34,24 @@ void blank(){
 }
 void hello() {
     vga_print("Hello, World!\n");
+}
+
+// Ring3で実行されるユーザープログラム。
+// 文字列リテラル(.rodata, high half)を参照しないよう、
+// メッセージをスタック上に1文字ずつ構築する（位置独立にするため）。
+// Ring3で実行されるユーザープログラム。
+// 文字列リテラル(.rodata, high half)を参照しないよう、
+// メッセージをスタック上に1文字ずつ構築する（位置独立にするため）。
+__attribute__((section(".user_text")))
+void user_hello() {
+    char msg[19];
+    msg[0]='H'; msg[1]='e'; msg[2]='l'; msg[3]='l'; msg[4]='o';
+    msg[5]=' '; msg[6]='f'; msg[7]='r'; msg[8]='o'; msg[9]='m';
+    msg[10]=' '; msg[11]='R'; msg[12]='i'; msg[13]='n'; msg[14]='g';
+    msg[15]='3'; msg[16]='!'; msg[17]='\n'; msg[18]='\0';
+    user_write(msg, 18);
+    user_exit(0);
+    for(;;) {}  // 念のため（user_exitで戻らない）
 }
 void task_a() {
     vga_print("Task A is running...\n");
@@ -84,6 +105,7 @@ void kernel_main(){
     vga_print("\n");
     its_OK();vga_print(" Kernel is loaded!\n");
     pmm_init();
+    vmm_init();
     its_OK();vga_print(" Physical Memory Manager is initialized!\n\n");
     vga_print("Total Memory: ");vga_print_dec(pmm_get_total_memory());vga_print(" bytes may be available\n");
     // ここまででメモリマネージャの初期化が完了
@@ -144,6 +166,8 @@ vga_print("\n");
 // a == d なら再利用できてる
     vga_print("\n");
     vga_print("Testing scheduler...\n");
+    syscall_init();
+    its_OK();vga_print(" Syscall initialized!\n");
     scheduler_init();
     its_OK();vga_print(" Scheduler initialized!\n");
     //vga_print("Scheduler initialized!\n");
@@ -154,14 +178,15 @@ vga_print("\n");
     //scheduler_add_task("task_a",task_a, 4096);
     //vga_print("Added Task A\n");
     //scheduler_add_task("blank", blank, 4096);
-    for(int i = 0; i < 200; i++) {
+    for(int i = 0; i < 2; i++) {
         scheduler_add_task("hello" , hello, 4096);
         //vga_print("Added ");
         //vga_print_hex(i);
         //vga_print("\n");
     }
     scheduler_add_task("shell", shell_run, 4096);
-    ///scheduler_add_task_user("blank", blank, 4096);
+
+    scheduler_add_task_user("user_hello", user_hello, 4096);
     pit_init();
     __asm__ volatile ("sti");
 

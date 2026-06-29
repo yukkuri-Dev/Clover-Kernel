@@ -46,8 +46,11 @@ void gdt_init() {
     set_entry(0x00, 0, 0,       0,    0   );  // Null
     set_entry(0x08, 0, 0xFFFFF, 0x9A, 0xA0);  // Kernel Code (64bit, Ring0)
     set_entry(0x10, 0, 0xFFFFF, 0x92, 0xC0);  // Kernel Data (Ring0)
-    set_entry(0x18, 0, 0xFFFFF, 0xFA, 0xA0);  // User Code   (64bit, Ring3, sel=0x1B)
-    set_entry(0x20, 0, 0xFFFFF, 0xF2, 0xC0);  // User Data   (Ring3, sel=0x23)
+    // SYSRET の都合で UData(0x18) を UCode(0x20) より前に置く:
+    //   STAR[63:48]=0x10 → SYSRET CS=0x10+16=0x20|3=0x23(UCode),
+    //                              SS=0x10+8 =0x18|3=0x1B(UData)
+    set_entry(0x18, 0, 0xFFFFF, 0xF2, 0xC0);  // User Data   (Ring3, sel=0x1B)
+    set_entry(0x20, 0, 0xFFFFF, 0xFA, 0xA0);  // User Code   (64bit, Ring3, sel=0x23)
 
     // TSS初期化
     for (int i = 0; i < (int)sizeof(tss_t); i++) ((uint8_t*)&tss)[i] = 0;
