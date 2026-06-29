@@ -2,3 +2,4 @@ qemu.log
 os.img
 build/*
 .claude/*
+boot/boot.asm
