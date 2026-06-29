@@ -21,6 +21,10 @@ start:
     mov ss, ax
     mov sp, 0x7C00
 
+    ; boot.asmが0x7000に書いたドライブ番号を保存
+    mov al, [0x7000]
+    mov [boot_drive], al
+
     ; A20ライン有効化
     mov ax, 0x2401
     int 0x15
@@ -146,18 +150,27 @@ start:
 
 .load_done:
     ; ---- メモリマップ取得 (e820) ----
+    ; エントリを0x500に書く。最大128エントリ(3072バイト)で上限打ち切り
     mov di, 0x500
     xor ebx, ebx
+    mov bp, 0               ; エントリ数カウンタ
 .e820_loop:
     mov eax, 0xE820
     mov ecx, 24
     mov edx, 0x534D4150
     int 0x15
-    jc  .e820_done
+    jc  .e820_done          ; エラーまたは終了
+    cmp eax, 0x534D4150     ; BIOSが"SMAP"を返しているか確認
+    jne .e820_done
     add di, 24
+    inc bp
+    cmp bp, 128             ; 上限チェック
+    jae .e820_done
     test ebx, ebx
     jnz .e820_loop
 .e820_done:
+    ; エントリ数を0x4F8に保存（カーネルが参照できるよう）
+    mov [0x4F8], bp
 
     ; ---- GDT → Protected Mode → Long Mode ----
     lgdt [gdt_descriptor]
@@ -207,7 +220,7 @@ read_fat_entry:
 disk_read:
     pusha
     mov ah, 0x42
-    mov dl, 0x80
+    mov dl, [boot_drive]    ; BIOSから受け取った実際のドライブ番号を使う
     mov si, dap
     int 0x13
     jc  disk_error
@@ -233,6 +246,7 @@ print_str:
     ret
 
 ; ---- データ ----
+boot_drive     db 0
 kernel_name    db 'KERNEL  BIN'
 msg_notfound   db 'KERNEL.BIN not found', 0x0D, 0x0A, 0
 msg_diskerr    db 'Disk error', 0x0D, 0x0A, 0

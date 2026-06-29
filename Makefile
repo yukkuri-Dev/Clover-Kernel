@@ -174,6 +174,12 @@ debug: $(OS_IMG)
 		-ex "target remote localhost:1234" \
 		-ex "set architecture i386:x86-64"
 
+# --- VHD変換 (VirtualBox用) ---
+# qemu-imgが必要: sudo apt install qemu-utils
+vhd: $(OS_IMG)
+	qemu-img convert -f raw -O vpc $(OS_IMG) $(OS_IMG:.img=.vhd)
+	@echo "[VHD] $(OS_IMG:.img=.vhd) created"
+
 # --- Clean ---
 clean:
 	rm -rf $(BUILD_DIR) $(OS_IMG)

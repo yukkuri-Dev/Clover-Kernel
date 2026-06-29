@@ -16,34 +16,48 @@ main:
     mov ss, ax
     mov sp, 0x7C00
 
-    ; STAGE2.BINはFAT32予約領域のLBA=2から書き込まれている
-    ; (LBA=0:MBR LBA=1:FSInfo LBA=6:BkBoot, LBA=2〜5,7〜31が空き)
-    ; 固定LBA=2から29セクタを0x7E00にロード
+    ; BIOSが渡してきたドライブ番号(dl)を保存
+    mov [boot_drive], dl
 
+    ; STAGE2.BINをLBA=2から64セクタ(32KB)→ 0x7E00にロード
     mov ah, 0x42
-    mov dl, 0x80
     mov si, dap
     int 0x13
     jc  boot_error
 
+    ; ドライブ番号をstage2に引き渡す (0x7000に置く)
+    mov al, [boot_drive]
+    mov [0x7000], al
+
     jmp 0x7E00
 
 boot_error:
-    mov ah, 0x0E
-    mov al, 'E'
-    int 0x10
-    mov al, 'R'
-    int 0x10
-    hlt
+    mov si, msg_err
+    call print_str
+    jmp $
+
+print_str:
+    lodsb
+    test al, al
+    jz   .done
+    mov  ah, 0x0E
+    int  0x10
+    jmp  print_str
+.done:
+    ret
+
+msg_err    db 'Load error', 0x0D, 0x0A, 0
+boot_drive db 0
 
 ; DAP構造体
 dap:
     db  0x10        ; DAPサイズ
     db  0x00        ; 予約
-    dw  64          ; セクタ数 (64 * 512 = 32KB)
+    dw  64          ; セクタ数
     dw  0x7E00      ; バッファオフセット
     dw  0x0000      ; バッファセグメント
-    dq  2           ; LBA=2 (固定、FAT32予約領域の空きセクタ)
+    dq  2           ; LBA=2
+dap_drive equ 0     ; 未使用(dlレジスタで渡す)
 
 times 510-($-$$) db 0
 dw 0xAA55
