@@ -1,30 +1,49 @@
 [BITS 16]
 [ORG 0x7C00]
 
-start:
-    ;init
-    xor ax, ax          ;int ax = 0
-    mov ds, ax          ;ds = ax
-    mov es, ax          ;es = ax
-    mov ss, ax          ;ss = ax
-    mov sp, 0x7C00      ;int sp = 0x7C00
+; FAT32 BPB用JMP (3バイト)
+jmp short main
+nop
 
+; BPB領域 (オフセット3〜89): mkfs.fatが上書きする
+times 87 db 0
 
-    ;load stage 2
-    mov ah, 0x02        ;AH = 0x02 (Read Sectors)
-    mov al, 34          ;AL = 34 (Read 34 sectors)
-    mov ch,0
-    mov cl,2            ;CL = 2 (Read from sector 2)
-    mov dh,0
-    mov dl,0x80         ;DL = 0x80 (First hard disk)
-    mov bx,0x7E00       ;BX = 0x7E00 (Load address)
-    int 0x13            ;Call BIOS interrupt
-    jc load_error       ;If carry flag is set, there was an error
-    jmp 0x7E00          ;Jump to the loaded stage 2
+; ブートコード (オフセット90)
+main:
+    xor ax, ax
+    mov ds, ax
+    mov es, ax
+    mov ss, ax
+    mov sp, 0x7C00
 
-load_error:
-    hlt                 ;stop
+    ; STAGE2.BINはFAT32予約領域のLBA=2から書き込まれている
+    ; (LBA=0:MBR LBA=1:FSInfo LBA=6:BkBoot, LBA=2〜5,7〜31が空き)
+    ; 固定LBA=2から29セクタを0x7E00にロード
 
+    mov ah, 0x42
+    mov dl, 0x80
+    mov si, dap
+    int 0x13
+    jc  boot_error
 
-times 510-($-$$) db 0 ;Fill the rest of the sector with zeros
-dw 0xAA55            ;Boot signature
+    jmp 0x7E00
+
+boot_error:
+    mov ah, 0x0E
+    mov al, 'E'
+    int 0x10
+    mov al, 'R'
+    int 0x10
+    hlt
+
+; DAP構造体
+dap:
+    db  0x10        ; DAPサイズ
+    db  0x00        ; 予約
+    dw  64          ; セクタ数 (64 * 512 = 32KB)
+    dw  0x7E00      ; バッファオフセット
+    dw  0x0000      ; バッファセグメント
+    dq  2           ; LBA=2 (固定、FAT32予約領域の空きセクタ)
+
+times 510-($-$$) db 0
+dw 0xAA55
