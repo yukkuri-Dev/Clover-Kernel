@@ -11,8 +11,11 @@ typedef struct task {
     uint64_t rbp;
     
     page_table_t page_table; // ページテーブルの物理アドレス
-    char name[32];  // タスク名
-    void*    stack;     // スタック領域
-    int      state;     // RUNNING/READY/BLOCKED
+    uint64_t kstack_top;     // Ring0スタック先頭（Ring3タスクのTSS RSP0用、Ring0タスクは0）
+    uint8_t ring;            // 0 = Ring0, 3 = Ring3
+    char name[32];
+    void*    stack;          // Ring0タスク: カーネルスタック / Ring3タスク: kstack(Ring0割り込みスタック)
+    void*    ustack;         // Ring3タスクのユーザースタック物理ページ（Ring0タスクは0）
+    int      state;
     struct task* next;
 } task_t;

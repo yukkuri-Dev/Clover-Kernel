@@ -11,42 +11,32 @@ static uint64_t buddy_pages;
 static uint8_t page_flags[MAX_PAGES];
 
 void buddy_init(uint64_t base, uint64_t length) {
-
     buddy_base  = base;
     buddy_pages = length / PAGE_SIZE;
-    //debug
-    vga_print("buddy_pages: ");
-    vga_print_dec(buddy_pages);
-    vga_print("\n");
-    vga_print("MAX_ORDER: ");
-    vga_print_dec(1 << MAX_ORDER);
-    vga_print("\n");
 
-    // フリーリスト初期化
     for (int i = 0; i <= MAX_ORDER; i++)
         free_list[i] = 0;
 
-    // 全ページを最大orderのブロックとして登録
     uint64_t i = 0;
-    int order = MAX_ORDER;
-    while (i + (1 << order) <= buddy_pages) {
-        buddy_free((void*)(base + i * PAGE_SIZE), order);
-        i += (1 << order);
+    while (i + (1 << MAX_ORDER) <= buddy_pages) {
+        buddy_free((void*)(base + i * PAGE_SIZE), MAX_ORDER);
+        i += (1 << MAX_ORDER);
     }
-    //debug
-    vga_print("free_list[9]: ");
-    vga_print_hex(free_list[MAX_ORDER]);
-    vga_print("\n");
+    int order = MAX_ORDER - 1;
+    while (order >= 0) {
+        if (i + (1 << order) <= buddy_pages) {
+            buddy_free((void*)(base + i * PAGE_SIZE), order);
+            i += (1 << order);
+        }
+        order--;
+    }
 }
 
 void* buddy_alloc(int order) {
-    // 要求orderが不正な場合は失敗
     if (order < 0 || order > MAX_ORDER) return 0;
-    // 要求orderから上を探す
     for (int o = order; o <= MAX_ORDER; o++) {
         if (free_list[o] == 0) continue;
 
-        // ブロックを取り出す
         uint64_t addr = free_list[o];
         free_list[o] = *(uint64_t*)addr;
 
@@ -61,6 +51,9 @@ void* buddy_alloc(int order) {
     }
     return 0;  // メモリ不足
 }
+
+extern void vga_print(const char*);
+extern void vga_print_hex(uint64_t);
 
 void buddy_free(void* ptr, int order) {
     uint64_t addr = (uint64_t)ptr;

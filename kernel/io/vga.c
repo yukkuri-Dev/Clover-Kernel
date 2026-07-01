@@ -5,6 +5,12 @@ static int cursor_x = 0;
 static int cursor_y = 0;
 static char* vga = (char*)0xB8000;
 
+// VGA出力をCOM1(0x3F8)シリアルへミラーする。
+// QEMUの -serial file:/-serial stdio でログを取れるようにするため。
+static void serial_out(char c) {
+    __asm__ volatile ("outb %0, %1" : : "a"((uint8_t)c), "Nd"((uint16_t)0x3F8));
+}
+
 void vga_clear() {
     for (int i = 0; i < 80 * 25 * 2; i += 2) {
         vga[i]   = ' ';
@@ -37,6 +43,7 @@ void vga_set_cursor(int x, int y) {
 }
 
 void vga_putchar(char c) {
+    serial_out(c);  // シリアルへミラー
     if (c == '\n') {
         cursor_x = 0;
         cursor_y++;

@@ -14,17 +14,52 @@ static uint64_t* get_or_create(uint64_t* table, int index, uint64_t flags) {
     return (uint64_t*)(table[index] & ~0xFFFULL);
 }
 
+// ブートローダーのPDPT/PDにPAGE_USERを付ける（初回のみ）
+// ブートローダーが作ったPDPT(0x11000)/PD(0x12000)はUSERフラグなしのため
+// Ring3がカーネルコードにアクセスできるよう一括でUSERを立てる
+void vmm_init() {
+    static int patched = 0;
+    if (patched) return;
+    patched = 1;
+
+    uint64_t* pdpt = (uint64_t*)0x11000;
+    for (int i = 0; i < 512; i++) {
+        if (pdpt[i] & PAGE_PRESENT)
+            pdpt[i] |= PAGE_USER;
+    }
+
+    uint64_t* pd = (uint64_t*)0x12000;
+    for (int i = 0; i < 512; i++) {
+        if (pd[i] & PAGE_PRESENT)
+            pd[i] |= PAGE_USER;
+    }
+
+    // CR3を再ロードしてTLBをフラッシュ
+    __asm__ volatile (
+        "mov %%cr3, %%rax\n"
+        "mov %%rax, %%cr3\n"
+        : : : "rax", "memory"
+    );
+}
+
+extern void vga_print(const char*);
+extern void vga_print_hex(uint64_t);
+
 page_table_t vmm_create_address_space() {
+    vmm_init();
+
     uint64_t phys = (uint64_t)buddy_alloc(0);
     uint64_t* pml4 = (uint64_t*)phys;
     for (int i = 0; i < 512; i++) pml4[i] = 0;
 
-    // カーネルPML4の全エントリをコピー
-    // PML4[0]   : 恒等マッピング（カーネルコード・スタック・物理メモリ領域）
-    // PML4[256+]: higher half（将来のカーネル仮想空間用）
+    // カーネルPML4をコピー（PML4にもUSERを付ける）
     uint64_t* kpml4 = (uint64_t*)0x10000;
-    for (int i = 0; i < 512; i++)
-        pml4[i] = kpml4[i];
+    for (int i = 0; i < 512; i++) {
+        if (kpml4[i] & PAGE_PRESENT)
+            pml4[i] = kpml4[i] | PAGE_USER;
+        else
+            pml4[i] = 0;
+    }
 
     return (page_table_t)phys;
 }
